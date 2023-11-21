@@ -1,18 +1,18 @@
 ﻿using JWTToken_API.DatabaseContext;
 using JWTToken_API.Enums;
 using JWTToken_API.Interfaces;
+using JWTToken_API.Interfaces.ReposInterfaces;
 using JWTToken_API.Model;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.IdentityModel.Tokens;
 
 namespace JWTToken_API.Services
 {
     public class UserService : IUserService
-    {
-        private readonly MyDBContext _myDBContext;
-        public UserService(MyDBContext myDBContext)
-        {
-            _myDBContext = myDBContext;
+    {        
+        private readonly IUserRepository _IUserRepository;
+        public UserService( IUserRepository iUserRepository)
+        {            
+            _IUserRepository = iUserRepository;
         }
         /// <summary>
         /// To authanticate user with valid email id and password.
@@ -21,18 +21,8 @@ namespace JWTToken_API.Services
         /// <param name="password"></param>
         /// <returns></returns>
         public async Task<UserModel> Authenticate(string email, string password)
-        {            
-            UserModel objUser = await _myDBContext.Users
-                .FirstOrDefaultAsync(x => x.Email == email && x.Password == password && x.IsActive == true);
-            
-            if (objUser != null && objUser.Email == email)
-            {
-                return objUser;
-            }
-            else
-            {
-                return null;
-            }           
+        {
+            return await _IUserRepository.Authenticate(email, password);
         }
         /// <summary>
         /// Get list of all active/inactive users without any filter.
@@ -40,7 +30,7 @@ namespace JWTToken_API.Services
         /// <returns></returns>
         public async Task<List<UserModel>> GetAllUsers()
         {
-            return await _myDBContext.Users.ToListAsync();
+            return await _IUserRepository.GetAll();
         }
 
         /// <summary>
@@ -60,7 +50,7 @@ namespace JWTToken_API.Services
                     return response;
                 }
 
-                if (_myDBContext.Users.Where(x => x.Email == user.Email).ToList().Count > 0)
+                if ((await _IUserRepository.GetByEmail(user.Email)).Count > 0)
                 {
                     response.Status = false;
                     response.Message = "Email Id already exists.";
@@ -73,11 +63,17 @@ namespace JWTToken_API.Services
                     response.Message = "Please enter correct role. Admin or User";
                     return response;
                 }
-                await _myDBContext.Users.AddAsync(user);
-                await _myDBContext.SaveChangesAsync();
-
-                response.Status = true;
-                response.Message = "User successfully registered.";
+                var result = await _IUserRepository.Insert(user);
+                if (result > 0)
+                {
+                    response.Status = true;
+                    response.Message = "User successfully registered.";
+                }
+                else
+                {
+                    response.Status = false;
+                    response.Message = "User not registered. Please try again with proper details.";
+                }
 
             }
             catch (Exception ex)

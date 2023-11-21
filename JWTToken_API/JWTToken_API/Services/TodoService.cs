@@ -1,19 +1,19 @@
 ﻿using AutoMapper;
 using JWTToken_API.DatabaseContext;
-using JWTToken_API.Interfaces;
+using JWTToken_API.Interfaces.ReposInterfaces;
+using JWTToken_API.Interfaces.ServicesInterfaces;
 using JWTToken_API.Model;
-using Microsoft.EntityFrameworkCore;
 
 namespace JWTToken_API.Services
 {
     public class TodoService : ITodoService
-    {
-        private readonly MyDBContext _myDBContext;
+    {        
         private readonly IMapper _IMapper;
-        public TodoService(MyDBContext myDBContext, IMapper iMapper)
-        {
-            _myDBContext = myDBContext;
+        private readonly ITodoRepository _ITodoRepository;
+        public TodoService(IMapper iMapper, ITodoRepository iTodoRepository)
+        {           
             _IMapper = iMapper;
+            _ITodoRepository = iTodoRepository;
         }
 
 
@@ -23,19 +23,17 @@ namespace JWTToken_API.Services
         /// <returns></returns>
         public async Task<List<TodoModel>> GetAll()
         {
-            return await _myDBContext.Todos.ToListAsync();
+            return await _ITodoRepository.GetAll();
         }
 
         /// <summary>
         /// Get todo task by todo id
         /// </summary>
         /// <param name="Id"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
+        /// <returns>Todo task details</returns>      
         public async Task<TodoModel> GetById(int Id)
         {
-            return await _myDBContext.Todos
-                .FirstOrDefaultAsync(x => x.Id == Id);
+            return await _ITodoRepository.GetById(Id);
 
         }
 
@@ -55,23 +53,25 @@ namespace JWTToken_API.Services
                     response.Message = "Please enter all required fields.";
                     return response;
                 }
-
-                if ((await _myDBContext.Todos.Where(x => x.TaskName == todoinput.TaskName).ToListAsync()).Count > 0)
+                if ((await _ITodoRepository.GetByTaskName(todoinput.TaskName)).Count > 0)
                 {
                     response.Status = false;
                     response.Message = "Task already already exists.";
                     return response;
                 }
-
                 var todo = _IMapper.Map<TodoModel>(todoinput);
 
-                int todoid = await _myDBContext.Todos.OrderByDescending(x => x.Id).Select(x => x.Id).FirstOrDefaultAsync();
-                todo.Id = todoid + 1;
-                await _myDBContext.Todos.AddAsync(todo);
-                await _myDBContext.SaveChangesAsync();
-
-                response.Status = true;
-                response.Message = "Todo task successfully saved.";
+                var result = await _ITodoRepository.Insert(todo);
+                if (result > 0)
+                {
+                    response.Status = true;
+                    response.Message = "Todo task successfully saved.";
+                }
+                else
+                {
+                    response.Status = false;
+                    response.Message = "Todo task not saved. Please try again with proper details.";
+                }
 
             }
             catch (Exception ex)
@@ -88,7 +88,7 @@ namespace JWTToken_API.Services
         /// </summary>
         /// <param name="todo"></param>
         /// <returns></returns>
-        public async Task<ServiceResponse> Update(int Id,TodoInputModel todoinput)
+        public async Task<ServiceResponse> Update(int Id, TodoInputModel todoinput)
         {
             ServiceResponse response = new ServiceResponse();
             try
@@ -99,18 +99,15 @@ namespace JWTToken_API.Services
                     response.Message = "Please enter all required fields.";
                     return response;
                 }
-
-                if ((await _myDBContext.Todos.Where(x => x.TaskName == todoinput.TaskName).ToListAsync()).Count > 0)
+                if ((await _ITodoRepository.GetByTaskName(todoinput.TaskName)).Count > 0)
                 {
                     response.Status = false;
                     response.Message = "Task already already exists.";
                     return response;
                 }
-
                 var todo = _IMapper.Map<TodoModel>(todoinput);
-                todo.Id = Id;
-                _myDBContext.Entry(todo).State = EntityState.Modified;
-                int result = await _myDBContext.SaveChangesAsync();
+                todo.Id = Id;              
+                int result = await _ITodoRepository.Update(todo);
                 if (result > 0)
                 {
                     response.Status = true;
@@ -136,22 +133,20 @@ namespace JWTToken_API.Services
         /// Delete todo task by todo id.
         /// </summary>
         /// <param name="Id"></param>
-        /// <returns></returns>
-        /// <exception cref="NotImplementedException"></exception>
+        /// <returns></returns>       
         public async Task<ServiceResponse> Delete(int Id)
         {
             ServiceResponse response = new ServiceResponse();
             try
             {
-                var todo = await _myDBContext.Todos.FirstOrDefaultAsync(x => x.Id == Id);
+                var todo = await _ITodoRepository.GetById(Id);
                 if (todo == null)
                 {
                     response.Status = false;
                     response.Message = "Todo task does not exists. Please enter proper id.";
                     return response;
-                }
-                _myDBContext.Todos.Remove(todo);
-                int result = await _myDBContext.SaveChangesAsync();
+                }                
+                int result = await _ITodoRepository.Delete(todo);
                 if (result > 0)
                 {
                     response.Status = true;
@@ -171,7 +166,7 @@ namespace JWTToken_API.Services
 
             return response;
         }
-        
+
     }
 
 }

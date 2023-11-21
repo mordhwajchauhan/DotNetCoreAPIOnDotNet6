@@ -1,5 +1,5 @@
 ﻿using JWTToken_API.Enums;
-using JWTToken_API.Interfaces;
+using JWTToken_API.Interfaces.ServicesInterfaces;
 using JWTToken_API.Model;
 using JWTToken_API.Services;
 using Microsoft.AspNetCore.Authorization;

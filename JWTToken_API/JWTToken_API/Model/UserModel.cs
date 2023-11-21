@@ -12,8 +12,6 @@ namespace JWTToken_API.Model
         [Required]
         [EmailAddress(ErrorMessage = "Please enter a valid emailid.")]
         public string Email { get; set; }
-
-
         [Required]
         public string Password { get; set; }
         [Required]

@@ -1,5 +1,8 @@
 using JWTToken_API.DatabaseContext;
 using JWTToken_API.Interfaces;
+using JWTToken_API.Interfaces.ReposInterfaces;
+using JWTToken_API.Interfaces.ServicesInterfaces;
+using JWTToken_API.Repositories;
 using JWTToken_API.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -17,10 +20,14 @@ builder.Services.AddAutoMapper(typeof(Program));
 // DI- of DB Context
 builder.Services.AddDbContext<MyDBContext>();
 
-//////////////////////////////DI - Services///////////////////////////////
+//////////////////////////////DI - Services & Repositories///////////////////////////////
 ///Services
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<ITodoService, TodoService>();
+
+///Repositories
+builder.Services.AddScoped<IUserRepository, UsersRepository>();
+builder.Services.AddScoped<ITodoRepository, TodoRepository>();
 
 
 
@@ -87,12 +94,6 @@ builder.Services.AddAuthentication(opt =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-//if (app.Environment.IsDevelopment())
-//{
-//    app.UseSwagger();
-//    app.UseSwaggerUI();
-//}
-
 app.UseSwagger();
 if (app.Environment.IsDevelopment())
 {
